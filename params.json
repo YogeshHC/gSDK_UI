@@ -4,5 +4,6 @@
     "reset":0,
     "pitchDown":0,
     "yawRight": 0,
-    "yawLeft":0
+    "yawLeft":0,
+    "Sweep":0
 }

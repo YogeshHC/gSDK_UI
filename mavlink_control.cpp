@@ -54,10 +54,10 @@ typedef struct
 
 /* Private variable- ---------------------------------------------------------*/
 static sdk_process_t sdk;
-int joyRoll = 0, joyPitch = 0, joyYaw = 0, stopMoving = 0, camZoom = 0, resetGimbal = 0; 
+int joyRoll = 0, joyPitch = 0, joyYaw = 0, stopMoving = 0, resetGimbal = 0, sweep = 0; 
 int socket_desc;
 bool stop = false;
-// bool stopZoom = true;
+float yawSpeed = 30;
 float angularVel = 5.0;
 int scale = 5;
 
@@ -137,8 +137,6 @@ int Gimbal_initialize(int argc, char **argv)
     size_t axis;
     thread th1(readJSON);
 
-    // camControl(ip_address);
-
     Gimbal_setProperties(gimbal_interface);
     Gimbal_setMsgRate(gimbal_interface);
     Gimbal_goToZero(gimbal_interface);
@@ -154,20 +152,13 @@ int Gimbal_initialize(int argc, char **argv)
             // Reset time             
             sdk.timeout = get_time_usec();
 
-            if(joyYaw == 0 && joyPitch == 0 && joyRoll == 0 && camZoom == 0){
+            if(joyYaw == 0 && joyPitch == 0 && joyRoll == 0 && sweep == 0){
                 Gimbal_stop(gimbal_interface);
-                // stopZoom = false;
-                // camZoomStop();
             }
             if(resetGimbal == 1){
                 Gimbal_goToZero(gimbal_interface);
                 resetGimbal = 0;
             }
-            // if(stopMoving == 1){
-            //     Gimbal_stop(gimbal_interface);
-            //     // stop = false;
-            //     // stopZoom = true;
-            // }
             // cout << joyPitch << joyRoll << joyYaw << stopMoving << "\n";
 
             if(joyYaw == -1){
@@ -197,14 +188,9 @@ int Gimbal_initialize(int argc, char **argv)
                 Gimbal_pitchUp(gimbal_interface);
             }
 
-            // if(camZoom == 1){
-            //     // cout << "Zoom In";
-            //     camZoomOut();
-            // }
-            // else if(camZoom == -1){
-            //     // cout << "Zoom Out";
-            //     camZoomIn();
-            // }
+            if(sweep == 1){
+                Gimbal_startSweep(gimbal_interface);
+            }
 		}
         /* Update autopilot attitude for gimbal to reduce pan drift*/
         if (time_display_ms - last_time_send_attitude_ms > 20) // 50Hz
@@ -537,11 +523,16 @@ void Gimbal_goToZero(Gimbal_Interface &onboard){
     float delta_roll_angle  = fabsf(onboard.get_gimbal_mount_orientation().roll - setpoint_roll);
     float delta_yaw_angle   = fabsf(onboard.get_gimbal_mount_orientation().yaw - setpoint_yaw);
 
+    // Json::Value value;
+    // std::ifstream paramsFile("params.json");
+    // paramsFile >> value;
+    // value["reset"] = 0;
 
-    // printf("Moving zero gimbal RYP [%3.2f - %3.2f - %3.2f] [Result: %d]\n",delta_pitch_angle,
-    //                                                                             delta_roll_angle,
-    //                                                                             delta_yaw_angle,
-    //                                                                             res);
+
+    printf("Moving zero gimbal RYP [%3.2f - %3.2f - %3.2f] [Result: %d]\n",delta_pitch_angle,
+                                                                                delta_roll_angle,
+                                                                                delta_yaw_angle,
+                                                                                res);
 
     // Check gimbal feedback COMMAND_ACK when sending MAV_CMD_DO_MOUNT_CONTROL
     if(res == MAV_RESULT_ACCEPTED) {
@@ -551,6 +542,21 @@ void Gimbal_goToZero(Gimbal_Interface &onboard){
             // Reset time for the next step
             sdk.last_time_send = get_time_usec();            
         }
+    }
+}
+
+void Gimbal_startSweep(Gimbal_Interface &onboard){
+    float speed_pitch  = 0.f;
+    float speed_roll  = 0.f;
+    float speed_yaw    = yawSpeed;
+
+    // Set command gimbal move
+    int res = onboard.set_gimbal_rotation_sync(speed_pitch, speed_roll, speed_yaw, GIMBAL_ROTATION_MODE_SPEED);
+    if(onboard.get_gimbal_mount_orientation().yaw > 45){
+        yawSpeed = -10.0;
+    }
+    else if(onboard.get_gimbal_mount_orientation().yaw < -45){
+        yawSpeed = 10.0;
     }
 }
 
@@ -638,64 +644,6 @@ quit_handler( int sig )
 	exit(0);
 }
 
-// void camControl(char *ip_address){
-// 	struct sockaddr_in server;
-// 	//Create socket
-// 	socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-// 	if (socket_desc == -1)
-// 	{
-// 		printf("Could not create socket");
-// 	}
-// 	memset((char *) &server, 0,sizeof(server));
-// 	server.sin_addr.s_addr = inet_addr(ip_address);
-// 	server.sin_family = AF_INET;
-// 	server.sin_port = htons(1000);
-
-// 	//Connect to remote server
-// 	if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
-// 	{
-// 		puts("========================= Camera Connection Error ===================\n");
-// 		// return 1;
-// 	}
-//     else{
-//     	puts("============================= Camera Connected ========================= \n");
-//     }
-// }
-
-// void camZoomStop(){
-//     unsigned char zoomStop[] = {0x06,0x81,0x01,0x04,0x07,0x00,0xFF,0x00,0x00,0x00};
-//     if(stopZoom == false){
-//         stopZoom = true;
-//         if(send(socket_desc , &zoomStop[1] , (size_t)zoomStop[0] , 0) < 0){
-//             puts("Send failed");
-//         }
-//         usleep(100000);
-//     }
-// }
-
-// void camZoomIn(){
-//     unsigned char zoomIn[] = {0x06,0x81,0x01,0x04,0x07,0x02,0xFF,0x00,0x00,0x00};
-//     if(send(socket_desc , &zoomIn[1] , (size_t)zoomIn[0] , 0) < 0)
-// 	{
-// 		puts("Send failed");
-//     }
-//     if(angularVel > 10){
-//         angularVel -= 5;
-//     }
-//     usleep(100000);
-// }
-
-// void camZoomOut(){
-//     unsigned char zoomOut[] = {0x06,0x81,0x01,0x04,0x07,0x03,0xFF,0x00,0x00,0x00};
-//     if(send(socket_desc , &zoomOut[1] , (size_t)zoomOut[0] , 0) < 0)
-// 	{
-// 		puts("Send failed");
-//     }
-//     if(angularVel < 50.0){
-//         angularVel += 5;
-//     }
-//     usleep(100000);
-// }
 
 void readJSON(){
     Json::Reader readParams;
@@ -704,20 +652,21 @@ void readJSON(){
     {
         try{
             std::ifstream paramsFile("params.json");
-            // std::ifstream people_file("people.json", std::ifstream::binary);
             paramsFile >> value;
-            // cout << value["pitchUP"];
-
-            // bool parsingSuccessful = readParams.parse( paramsFile, value, false );
+            int startSweep = value["Sweep"].asInt();
             int stopGimbal = value["Stop"].asInt();
             int pitchUp = value["pitchUP"].asInt();
             int reset = value["reset"].asInt();
-            // cout << value["Stop"].asInt();
             int pitchDown = value["pitchDown"].asInt();
             int yawRight = value["yawRight"].asInt();
             int yawLeft = value["yawLeft"].asInt();
-            // int stopGimbal = value.get("stopGimbal", "UTF-8").asInt();
-            // cout << sweep << "\n";
+
+            if(startSweep == 1){
+                sweep = 1;
+            }
+            else{
+                sweep = 0;
+            }
 
             if(pitchUp == 1){
                 joyPitch = 1;
@@ -747,92 +696,13 @@ void readJSON(){
             if(reset == 1){
                 resetGimbal = 1;
             }
-            // else if(stopGimbal == 0){
-            //     stopMoving = 0;
-            // }
             paramsFile.close();
         }
         catch (exception e){
-            // std::cout << e.what() << std::endl;
         }
     }
 }
 
-// void readJoystick(){
-//     Joystick joystick("/dev/input/js0");
-//     // Ensure that it was found and that we can use it
-//     if (!joystick.isFound()){
-//         printf("open failed.\n");
-//         exit(1);
-//         }
-//     while (true){
-//         // Restrict rate
-//         usleep(10);
-//         // Attempt to sample an event from the joystick
-//         JoystickEvent event;
-//         if (joystick.sample(&event)){
-//             if (event.isButton()){
-//                 // printf("Button %u is %s\n", event.number, event.value == 0 ? "up" : "down");
-//             }
-//             else if (event.isAxis()){
-//                 // printf("Axis %u is at position %d\n", event.number, event.value);
-
-//                 switch(event.number)
-//                 {
-//                 case 0:
-//                     // YAW
-//                     if(event.value < -24384){
-//                         joyYaw = -1;
-//                     }
-//                     else if(event.value > 24384){
-//                         joyYaw = 1;
-//                     }
-//                     else{
-//                         joyYaw = 0;
-//                     }
-//                     break;
-//                 case 1:
-//                     // ZOOM
-//                     if(event.value < -24384){
-//                         camZoom = -1;
-//                     }
-//                     else if(event.value > 24384){
-//                         camZoom = 1;
-//                     }
-//                     else{
-//                         camZoom = 0;
-//                     }
-//                     break;
-//                 case 3:
-//                     // ROLL
-//                     if(event.value < -30384){
-//                         joyRoll = -1;
-//                     }
-//                     else if(event.value > 30384){
-//                         joyRoll = 1;
-//                     }
-//                     else{
-//                         joyRoll = 0;
-//                     }
-//                 case 4:
-//                     // PITCH
-//                     if(event.value < -30384){
-//                         joyPitch = -1;
-//                     }
-//                     else if(event.value > 30384){
-//                         joyPitch = 1;
-//                     }
-//                     else{
-//                         joyPitch = 0;
-//                     }
-
-//                 default:
-//                     break;
-//                 }
-//             }
-//         }
-//     }
-// }
 // ------------------------------------------------------------------------------
 //   Main
 // ------------------------------------------------------------------------------

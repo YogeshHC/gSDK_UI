@@ -687,7 +687,7 @@ param_process(void)
         	}
         	else
         	{
-	        	printf("Error: %d\n", current_messages.sys_status.errors_count2);
+	        	printf("Gimbal Not Aligning. Error: %d\n", current_messages.sys_status.errors_count2);
         	}
 
         	break;
