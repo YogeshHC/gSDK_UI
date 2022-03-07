@@ -54,7 +54,7 @@ typedef struct
 
 /* Private variable- ---------------------------------------------------------*/
 static sdk_process_t sdk;
-int joyRoll = 0, joyPitch = 0, joyYaw = 0, stopMoving = 0, resetGimbal = 0, sweep = 0; 
+int joyRoll = 0, joyPitch = 0, joyYaw = 0, stopMoving = 0, resetGimbal = 0, sweep = 0, reboot = 0; 
 int socket_desc;
 bool stop = false;
 float yawSpeed = 30;
@@ -130,6 +130,7 @@ int Gimbal_initialize(int argc, char **argv)
 	 * This is where the port is opened, and read and write threads are started.
 	 */
 	serial_port.start();
+    gimbal_interface.set_gimbal_reboot();
 	gimbal_interface.start();
     const char *device;
     int js;
@@ -159,6 +160,10 @@ int Gimbal_initialize(int argc, char **argv)
                 Gimbal_goToZero(gimbal_interface);
                 resetGimbal = 0;
             }
+             if(reboot == 1){
+                gimbal_interface.set_gimbal_reboot();
+                reboot = 0;
+             }
             // cout << joyPitch << joyRoll << joyYaw << stopMoving << "\n";
 
             if(joyYaw == -1){
@@ -660,6 +665,7 @@ void readJSON(){
             int pitchDown = value["pitchDown"].asInt();
             int yawRight = value["yawRight"].asInt();
             int yawLeft = value["yawLeft"].asInt();
+            int rebootGimbal = value["Reboot"].asInt();
 
             if(startSweep == 1){
                 sweep = 1;
@@ -696,9 +702,13 @@ void readJSON(){
             if(reset == 1){
                 resetGimbal = 1;
             }
+            if(rebootGimbal == 1){
+                reboot = 1;
+            }
             paramsFile.close();
         }
         catch (exception e){
+            cout << e.what() << "\n";
         }
     }
 }
