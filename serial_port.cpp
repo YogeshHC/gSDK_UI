@@ -293,6 +293,10 @@ void
 Serial_Port::
 close_serial()
 {
+	tcflush(fd, TCIOFLUSH);
+	printf("Serial Port Flush - Successful\n");
+	sleep(1);
+
 	printf("CLOSE PORT\n");
 
 	int result = close(fd);

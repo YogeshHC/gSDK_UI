@@ -130,7 +130,7 @@ int Gimbal_initialize(int argc, char **argv)
 	 * This is where the port is opened, and read and write threads are started.
 	 */
 	serial_port.start();
-    gimbal_interface.set_gimbal_reboot();
+    // gimbal_interface.set_gimbal_reboot();
 	gimbal_interface.start();
     const char *device;
     int js;
