@@ -6,5 +6,6 @@
     "yawRight": 0,
     "yawLeft":0,
     "Sweep":0,
-    "Reboot":0
+    "Reboot":0,
+    "Speed":10.0
 }

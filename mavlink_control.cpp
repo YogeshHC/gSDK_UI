@@ -57,7 +57,7 @@ static sdk_process_t sdk;
 int joyRoll = 0, joyPitch = 0, joyYaw = 0, stopMoving = 0, resetGimbal = 0, sweep = 0, reboot = 0; 
 int socket_desc;
 bool stop = false;
-float yawSpeed = 30;
+float yawSpeed = 10;
 float angularVel = 5.0;
 int scale = 5;
 
@@ -558,10 +558,10 @@ void Gimbal_startSweep(Gimbal_Interface &onboard){
     // Set command gimbal move
     int res = onboard.set_gimbal_rotation_sync(speed_pitch, speed_roll, speed_yaw, GIMBAL_ROTATION_MODE_SPEED);
     if(onboard.get_gimbal_mount_orientation().yaw > 45){
-        yawSpeed = -10.0;
+        yawSpeed = -1 * yawSpeed;
     }
     else if(onboard.get_gimbal_mount_orientation().yaw < -45){
-        yawSpeed = 10.0;
+        yawSpeed = yawSpeed;
     }
 }
 
@@ -666,6 +666,7 @@ void readJSON(){
             int yawRight = value["yawRight"].asInt();
             int yawLeft = value["yawLeft"].asInt();
             int rebootGimbal = value["Reboot"].asInt();
+            yawSpeed = value["Speed"].asFloat();
 
             if(startSweep == 1){
                 sweep = 1;
