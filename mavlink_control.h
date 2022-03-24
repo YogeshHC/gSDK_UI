@@ -1,17 +1,3 @@
-/*******************************************************************************
- * Copyright (c) 2018, The GremsyCo
- * All rights reserved.
- * Redistribution and use in source and binary forms, with or without modification,
- * are strictly prohibited without prior permission of The GremsyCo.
- *
- * @file    mavlink_control.h
- * @author  The GremsyCo
- * @version V1.0.0
- * @date    August-021-2018
- * @brief   This file contains expand of gMavlink
- *
- ******************************************************************************/
-/* Includes ------------------------------------------------------------------*/
 
 #include <iostream>
 #include <stdio.h>
@@ -24,48 +10,78 @@
 #include <signal.h>
 #include <time.h>
 #include <sys/time.h>
+#include <ardupilotmega/mavlink.h>
+#include "gimbal_interface.h"
+#include "serial_port.h"
 
 using std::string;
 using namespace std;
 
-#include <ardupilotmega/mavlink.h>
+typedef struct {
+    uint64_t last_time_send;
+    uint64_t timeout;
+} sdk_process_t;
 
-#include "gimbal_interface.h"
-#include "serial_port.h"
+typedef struct{
+    int pitch;
+    int yaw;
+    bool reset;
+    bool stop;
+    bool reboot;
+} controls;
 
+typedef struct{
+    bool sweep;
+    float speed;
+} sweep;
 
-// ------------------------------------------------------------------------------
-//   Prototypes
-// ------------------------------------------------------------------------------
+typedef struct{
+    int ready;
+    int errorCode;
+} status;
 
-// int main(int argc, char **argv);
-int Gimbal_initialize(int argc, char **argv);
+typedef struct{
+    float roll;
+    float pitch;
+    float yaw;
+} att;
 
-void Gimbal_checkVersion(Gimbal_Interface &gimbal_interface);
-void Gimbal_setProperties(Gimbal_Interface &gimbal_interface);
-void Gimbal_setMsgRate(Gimbal_Interface &gimbal_interface);
-void Gimbal_turnOff(Gimbal_Interface &gimbal_interface);
-void Gimbal_turnOn(Gimbal_Interface &gimbal_interface);
-void Gimbal_lockMode(Gimbal_Interface &gimbal_interface);
-void Gimbal_pitchUp(Gimbal_Interface &gimbal_interface);
-void Gimbal_pitchDown(Gimbal_Interface &gimbal_interface);
-void Gimbal_rollRight(Gimbal_Interface &gimbal_interface);
-void Gimbal_rollLeft(Gimbal_Interface &gimbal_interface);
-void Gimbal_yawRight(Gimbal_Interface &gimbal_interface);
-void Gimbal_yawLeft(Gimbal_Interface &gimbal_interface);
-void Gimbal_stop(Gimbal_Interface &gimbal_interface);
-void Gimbal_goToZero(Gimbal_Interface &gimbal_interface);
-void Gimbal_startSweep(Gimbal_Interface &gimbal_interface);
-void Gimbal_displays(Gimbal_Interface &gimbal_interface);
-
-void readJoystick();
-void readJSON();
-
-void commands(Gimbal_Interface &gimbal_interface);
-void parse_commandline(int argc, char **argv, char *&ip_address,char *&uart_name, int &baudrate);
-
-// quit handler
 Gimbal_Interface *gimbal_interface_quit;
 Serial_Port *serial_port_quit;
+static sdk_process_t sdk;
+static controls control;
+static sweep swp;
+static status stat;
+static att pos;
+float angularVel = 5.0;
+
 void quit_handler( int sig );
+void parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate);
+void readJSON();
+
+class gimbalControl{
+    public:
+        gimbalControl(int argc, char **argv);
+
+    private:
+        void gimbalControlLoop(Gimbal_Interface &gimbal_interface);
+        void Gimbal_setProperties(Gimbal_Interface &gimbal_interface);
+        void Gimbal_setMsgRate(Gimbal_Interface &gimbal_interface);
+        void Gimbal_displays(Gimbal_Interface &gimbal_interface);
+        void getGimbalPos(Gimbal_Interface &gimbal_interface);
+        
+        int Gimbal_pitchUp(Gimbal_Interface &gimbal_interface);
+        int Gimbal_pitchDown(Gimbal_Interface &gimbal_interface);
+        int Gimbal_yawRight(Gimbal_Interface &gimbal_interface);
+        int Gimbal_yawLeft(Gimbal_Interface &gimbal_interface);
+        int Gimbal_stop(Gimbal_Interface &gimbal_interface);
+        int Gimbal_goToZero(Gimbal_Interface &gimbal_interface);
+        int Gimbal_startSweep(Gimbal_Interface &gimbal_interface);
+};
+
+
+
+
+
+
 

@@ -1,11 +1,22 @@
 {
-    "pitchUP":0,
-    "Stop":0,
-    "reset":0,
-    "pitchDown":0,
-    "yawRight": 0,
-    "yawLeft":0,
-    "Sweep":0,
+    "GimbalControls":{
+        "Stop":0,
+        "pitchDown":0,
+        "pitchUP":0,
+        "yawLeft":0,
+        "yawRight":0
+        },
+    "GimbalStatus":{
+        "roll":0.0, 
+        "pitch":0.0, 
+        "yaw":0.0,
+        "error":4,
+        "ready":1
+        },
     "Reboot":0,
-    "Speed":10.0
+    "SweepControls":{
+        "Speed":10,
+        "Sweep":0
+        },
+    "reset":0
 }
