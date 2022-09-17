@@ -1,0 +1,1 @@
+{"GimbalControls": {"Stop": 0, "pitchDown": 0, "pitchUP": 0, "yawLeft": 0, "yawRight": 1}, "SweepControls": {"Speed": 5, "Sweep": 1, "angle": 45}, "GimbalStatus": {"error": 0, "ready": 1, "reset": 0}, "Reboot": 0}

@@ -54,13 +54,14 @@ typedef struct
 
 /* Private variable- ---------------------------------------------------------*/
 static sdk_process_t sdk;
-int joyRoll = 0, joyPitch = 0, joyYaw = 0, stopMoving = 0, resetGimbal = 0, sweep = 0, reboot = 0; 
+int joyRoll = 0, joyPitch = 0, joyYaw = 0, stopMoving = 0, resetGimbal = 0, sweep = 0, reboot = 0, goToPos = 0, sweepAngle = 0; 
 int socket_desc;
 bool stop = false;
-float yawSpeed = 10;
+bool ready = false;
+float yawSpeed = 10.0;
 float angularVel = 5.0;
 int scale = 5;
-
+float r,p,y;
 
 // ------------------------------------------------------------------------------
 //   Gimbal sample control and get data 
@@ -143,6 +144,7 @@ int Gimbal_initialize(int argc, char **argv)
     Gimbal_goToZero(gimbal_interface);
 	/// Process data 
     // cout << joyPitch << joyRoll << joyYaw << "\n";
+    ready = true;
 	while (!gimbal_interface.get_flag_exit())
 	{
 		uint64_t time_display_ms = get_time_msec();
@@ -152,13 +154,16 @@ int Gimbal_initialize(int argc, char **argv)
 		{
             // Reset time             
             sdk.timeout = get_time_usec();
+            r = gimbal_interface.get_gimbal_mount_orientation().roll;
+            p = gimbal_interface.get_gimbal_mount_orientation().pitch;
+            y = gimbal_interface.get_gimbal_mount_orientation().yaw;
 
             if(joyYaw == 0 && joyPitch == 0 && joyRoll == 0 && sweep == 0){
                 Gimbal_stop(gimbal_interface);
             }
             if(resetGimbal == 1){
                 Gimbal_goToZero(gimbal_interface);
-                resetGimbal = 0;
+                // resetGimbal = 0;
             }
              if(reboot == 1){
                 gimbal_interface.set_gimbal_reboot();
@@ -195,6 +200,10 @@ int Gimbal_initialize(int argc, char **argv)
 
             if(sweep == 1){
                 Gimbal_startSweep(gimbal_interface);
+            }
+
+            if(goToPos == 1){
+                Gimbal_goToPos(gimbal_interface);
             }
 		}
         /* Update autopilot attitude for gimbal to reduce pan drift*/
@@ -377,9 +386,9 @@ void Gimbal_setProperties(Gimbal_Interface &onboard){
     usleep(1000);
 
     // Motor control likes: Stiffness, holdstrength, gyro filter, output filter and gain
-    gimbal_motor_control_t tilt = {10, 40};
-    gimbal_motor_control_t roll = {10, 40};
-    gimbal_motor_control_t pan = {10, 40};
+    gimbal_motor_control_t tilt = {12, 30};
+    gimbal_motor_control_t roll = {14, 12};
+    gimbal_motor_control_t pan = {85, 40};
     onboard.set_gimbal_motor_control(tilt, roll, pan, 2, 4, 120);
 
     /*Delay 1ms*/
@@ -483,7 +492,7 @@ void Gimbal_yawRight(Gimbal_Interface &onboard){
 void Gimbal_yawLeft(Gimbal_Interface &onboard){
     float speed_pitch  = 0.0;
     float speed_roll  = 0.0;
-    float speed_yaw    = -angularVel;
+    float speed_yaw    = -10.0;
     int res = onboard.set_gimbal_rotation_sync(speed_pitch, speed_roll, speed_yaw, GIMBAL_ROTATION_MODE_SPEED);
     // printf("Yaw Left [%3.2f - %3.2f - %3.2f] [Result: %d]\n",speed_roll,speed_pitch, speed_yaw,res);
 }
@@ -534,10 +543,14 @@ void Gimbal_goToZero(Gimbal_Interface &onboard){
     // value["reset"] = 0;
 
 
-    printf("Moving zero gimbal RYP [%3.2f - %3.2f - %3.2f] [Result: %d]\n",delta_pitch_angle,
-                                                                                delta_roll_angle,
-                                                                                delta_yaw_angle,
-                                                                                res);
+    // printf("Moving zero gimbal RYP [%3.2f - %3.2f - %3.2f] [Result: %d]\n",delta_pitch_angle,
+    //                                                                             delta_roll_angle,
+    //                                                                             delta_yaw_angle,
+    //                                                                             res);
+
+    if(delta_pitch_angle < 1 && delta_roll_angle < 1 && delta_yaw_angle < 1){
+        resetGimbal = 0;
+    }
 
     // Check gimbal feedback COMMAND_ACK when sending MAV_CMD_DO_MOUNT_CONTROL
     if(res == MAV_RESULT_ACCEPTED) {
@@ -550,19 +563,32 @@ void Gimbal_goToZero(Gimbal_Interface &onboard){
     }
 }
 
+void Gimbal_goToPos(Gimbal_Interface &onboard){
+    int res = onboard.set_gimbal_rotation_sync(p, r, y, GIMBAL_ROTATION_MODE_ABSOLUTE_ANGLE);
+    goToPos = 0;
+}
+
 void Gimbal_startSweep(Gimbal_Interface &onboard){
-    float speed_pitch  = 0.f;
-    float speed_roll  = 0.f;
-    float speed_yaw    = yawSpeed;
+    // float speed_pitch  = 0.f;
+    // float speed_roll  = 0.f;
+    // float speed_yaw    = yawSpeed;
 
     // Set command gimbal move
-    int res = onboard.set_gimbal_rotation_sync(speed_pitch, speed_roll, speed_yaw, GIMBAL_ROTATION_MODE_SPEED);
-    if(onboard.get_gimbal_mount_orientation().yaw > 45){
-        yawSpeed = -1 * yawSpeed;
+    // cout << speed_yaw << "\n";
+    //  int res = onboard.set_gimbal_rotation_sync(speed_pitch, speed_roll, speed_yaw, GIMBAL_ROTATION_MODE_SPEED);
+    if(onboard.get_gimbal_mount_orientation().yaw > sweepAngle){
+        if(yawSpeed > 0){
+            yawSpeed = -1 * yawSpeed;
+        }
+        // cout << "**>45***" << yawSpeed << "-----" << onboard.get_gimbal_mount_orientation().yaw << "++++";
     }
-    else if(onboard.get_gimbal_mount_orientation().yaw < -45){
-        yawSpeed = yawSpeed;
+    else if(onboard.get_gimbal_mount_orientation().yaw < -sweepAngle){
+        if(yawSpeed < 0){
+            yawSpeed = -1 * yawSpeed;
+        }
+        // cout << "***<-45**" << yawSpeed << "-----" << onboard.get_gimbal_mount_orientation().yaw << "++++";
     }
+    int res = onboard.set_gimbal_rotation_sync(0, 0, yawSpeed, GIMBAL_ROTATION_MODE_SPEED);
 }
 
 // ------------------------------------------------------------------------------
@@ -653,26 +679,35 @@ quit_handler( int sig )
 void readJSON(){
     Json::Reader readParams;
     Json::Value value;
+    Json::StyledWriter buffer;
     while (true)
     {
         try{
             std::ifstream paramsFile("params.json");
             paramsFile >> value;
-            int startSweep = value["Sweep"].asInt();
-            int stopGimbal = value["Stop"].asInt();
-            int pitchUp = value["pitchUP"].asInt();
-            int reset = value["reset"].asInt();
-            int pitchDown = value["pitchDown"].asInt();
-            int yawRight = value["yawRight"].asInt();
-            int yawLeft = value["yawLeft"].asInt();
+            
+            int stopGimbal = value["GimbalControls"]["Stop"].asInt();
+            int pitchUp = value["GimbalControls"]["pitchUP"].asInt();
+            int pitchDown = value["GimbalControls"]["pitchDown"].asInt();
+            int yawRight = value["GimbalControls"]["yawRight"].asInt();
+            int yawLeft = value["GimbalControls"]["yawLeft"].asInt();
+
             int rebootGimbal = value["Reboot"].asInt();
-            yawSpeed = value["Speed"].asFloat();
+            int setPos = value["SetPos"].asInt();
+            int getPos = value["GetPos"].asInt();
+
+            int reset = value["GimbalStatus"]["reset"].asInt();
+
+            int startSweep = value["SweepControls"]["Sweep"].asInt();
+
+            sweepAngle = value["SweepControls"]["angle"].asInt();
 
             if(startSweep == 1){
                 sweep = 1;
             }
             else{
                 sweep = 0;
+                yawSpeed = value["SweepControls"]["Speed"].asFloat();
             }
 
             if(pitchUp == 1){
@@ -705,6 +740,37 @@ void readJSON(){
             }
             if(rebootGimbal == 1){
                 reboot = 1;
+            }
+
+            if(getPos == 1){
+                paramsFile.close();
+                std::ofstream parametersFile;
+                parametersFile.open("params.json");
+                value["GetPos"] = 0;
+                value["GimbalPos"]["roll"] = r;
+                value["GimbalPos"]["pitch"] = p;
+                value["GimbalPos"]["yaw"] = y;
+                parametersFile << buffer.write(value);
+                parametersFile.close();
+
+            }
+
+            if(setPos == 1){
+                paramsFile.close();
+                goToPos = 1;
+                r = value["GimbalPos"]["roll"].asFloat();
+                p = value["GimbalPos"]["pitch"].asFloat();
+                y = value["GimbalPos"]["yaw"].asFloat();
+            }
+
+            if(ready){
+                ready = false;
+                paramsFile.close();
+                std::ofstream parametersFile;
+                parametersFile.open("params.json");
+                value["GimbalStatus"]["ready"] = 1;
+                parametersFile << buffer.write(value);
+                parametersFile.close();
             }
             paramsFile.close();
         }

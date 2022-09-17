@@ -55,6 +55,7 @@ void Gimbal_yawRight(Gimbal_Interface &gimbal_interface);
 void Gimbal_yawLeft(Gimbal_Interface &gimbal_interface);
 void Gimbal_stop(Gimbal_Interface &gimbal_interface);
 void Gimbal_goToZero(Gimbal_Interface &gimbal_interface);
+void Gimbal_goToPos(Gimbal_Interface &gimbal_interface);
 void Gimbal_startSweep(Gimbal_Interface &gimbal_interface);
 void Gimbal_displays(Gimbal_Interface &gimbal_interface);
 

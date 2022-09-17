@@ -1,0 +1,15 @@
+[Unit]
+Description=Checking USB serial conn
+
+[Service]
+User=agx
+WorkingDirectory=/home/agx/gimbalapplications/v4_gSDK_UI
+ExecStart=/usr/bin/python /home/agx/gimbalapplications/v4_gSDK_UI/checkserial_conn.py
+Restart=always
+#StandardOutput=append:/home/agx/log1.log
+#StandardError=append:/home/agx/log2.log
+
+#replace /home/unixcop/project/ with your Path, venv/bin/activate with your source and test.py with your script name
+
+[Install]
+WantedBy=multi-user.target
